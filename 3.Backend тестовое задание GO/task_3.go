@@ -35,9 +35,10 @@ func main() {
 		followers := e.ChildText(".subscribers")
 		avgLikes := e.ChildText(".authentic")
 		avgComments := e.ChildText(".engagement")
-
-		data := []string{position, username, nikname, category, country, followers, avgLikes, avgComments}
-		csvWriter.Write(data)
+		if e.ChildText(".contributor .contributor__title") != "" {
+			data := []string{position, username, nikname, category, country, followers, avgLikes, avgComments}
+			csvWriter.Write(data)
+		}
 
 	})
 
