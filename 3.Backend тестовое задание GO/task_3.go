@@ -1,38 +1,51 @@
 package main
 
 import (
+	"encoding/csv"
 	"fmt"
 	"log"
-	"net/http"
+	"os"
 
-	"github.com/PuerkitoBio/goquery"
+	"github.com/gocolly/colly"
 )
 
-func ExampleScrape() {
-	// Request the HTML page.
-	res, err := http.Get("https://hypeauditor.com/top-instagram-all-russia/")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer res.Body.Close()
-	if res.StatusCode != 200 {
-		log.Fatalf("status code error: %d %s", res.StatusCode, res.Status)
-	}
-
-	// Load the HTML document
-	doc, err := goquery.NewDocumentFromReader(res.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Find the review items
-	doc.Find("table").Each(func(i int, s *goquery.Selection) {
-		// For each item found, get the title
-		title := s.Find("a").Text()
-		fmt.Printf("Review %d: %s\n", i, title)
-	})
-}
-
 func main() {
-	ExampleScrape()
+
+	c := colly.NewCollector()
+
+	file, err := os.Create("Top Instagram Influencers in Russia.csv")
+	if err != nil {
+		log.Fatalf("Ошибка при создании файла CSV: %v", err)
+	}
+	defer file.Close()
+
+	csvWriter := csv.NewWriter(file)
+	defer csvWriter.Flush()
+
+	headers := []string{"Рейтинг", "Имя пользователя", "Ник", "Категория", "Страна", "Подписчики", "Средние лайки", "Средние комментарии"}
+	csvWriter.Write(headers)
+
+	c.OnHTML(".ranking-card .table .row", func(e *colly.HTMLElement) {
+
+		position := e.ChildText(".row-cell.rank > span")
+		username := e.ChildText(".contributor .contributor__title")
+		nikname := e.ChildText(".contributor .contributor__name-content")
+		category := e.ChildText(".category")
+		country := e.ChildText(".audience")
+		followers := e.ChildText(".subscribers")
+		avgLikes := e.ChildText(".authentic")
+		avgComments := e.ChildText(".engagement")
+
+		data := []string{position, username, nikname, category, country, followers, avgLikes, avgComments}
+		csvWriter.Write(data)
+
+	})
+
+	url := "https://hypeauditor.com/top-instagram-all-russia/"
+	err = c.Visit(url)
+	if err != nil {
+		log.Fatalf("Ошибка при посещении страницы: %v", err)
+	}
+
+	fmt.Printf("Парсинг завершен.\n")
 }
